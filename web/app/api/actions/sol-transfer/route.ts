@@ -14,10 +14,26 @@ import {
   Transaction,
 } from '@solana/web3.js';
 
+// Function to validate query parameters
+const validateQueryParams = (requestUrl: URL) => {
+  const to = requestUrl.searchParams.get('to');
+  const amount = requestUrl.searchParams.get('amount');
+
+  if (!to) {
+    throw new Error("Missing required query parameter 'to'");
+  }
+
+  if (amount && (isNaN(Number(amount)) || Number(amount) < 1)) {
+    throw new Error("Invalid query parameter 'amount'");
+  }
+
+  return { to, amount: Number(amount) };
+};
+
+// GET request handler
 export async function GET(request: Request) {
   try {
     const requestUrl = new URL(request.url);
-
     const { to } = validateQueryParams(requestUrl);
 
     const baseHref = new URL(
@@ -26,10 +42,10 @@ export async function GET(request: Request) {
     );
 
     const payload: ActionGetResponse = {
-      title: 'Make a donation',
-      description: 'Blinks are the future',
-      label: 'Make a donation',
-      icon: 'https://pbs.twimg.com/media/GRqBUajXEAAYSTw?format=jpg&name=medium',
+      title: 'Make a SOL Transfer',
+      description: 'Transfer SOL securely and efficiently',
+      label: 'Transfer SOL',
+      icon: 'https://example.com/icon.png',
       disabled: false,
       links: {
         actions: [
@@ -38,11 +54,11 @@ export async function GET(request: Request) {
             href: `${baseHref}&amount=1`,
           },
           {
-            label: 'Send 2 SOL',
+            label: 'Send 5 SOL',
             href: `${baseHref}&amount=5`,
           },
           {
-            label: 'Send',
+            label: 'Send Custom Amount',
             href: `${baseHref}&amount=amount`,
             parameters: [
               {
@@ -56,33 +72,29 @@ export async function GET(request: Request) {
       },
     };
 
-    return Response.json(payload, {
+    return new Response(JSON.stringify(payload), {
       headers: ACTIONS_CORS_HEADERS,
     });
   } catch (error) {
-    let message = 'An unknown error occured.';
-    if (typeof error == 'string') message = error;
-    return new Response(message, {
-      status: 400,
-      headers: ACTIONS_CORS_HEADERS,
-    });
+    return handleErrorResponse(error);
   }
 }
 
+// OPTIONS request handler
 export const OPTIONS = GET;
 
+// POST request handler
 export async function POST(request: Request) {
-  let account: PublicKey;
-
   try {
     const requestUrl = new URL(request.url);
     const { to, amount } = validateQueryParams(requestUrl);
 
     const body: ActionPostRequest = await request.json();
+    let account: PublicKey;
 
     try {
       account = new PublicKey(body.account);
-    } catch (error) {
+    } catch {
       return new Response('Invalid "account" provided', {
         status: 400,
         headers: ACTIONS_CORS_HEADERS,
@@ -90,26 +102,16 @@ export async function POST(request: Request) {
     }
 
     const connectionURL = process.env.RPC_URL ?? clusterApiUrl('devnet');
-
     const connection = new Connection(connectionURL);
 
     const transaction = new Transaction();
 
-    const feeAmount = amount * 0.01;
-    const correctedAmount = amount - feeAmount;
-
-    const instructions = transaction.instructions;
-
-    instructions.push(
+    // Add transfer instruction
+    transaction.add(
       SystemProgram.transfer({
         fromPubkey: account,
         toPubkey: new PublicKey(to),
-        lamports: correctedAmount * LAMPORTS_PER_SOL,
-      }),
-      SystemProgram.transfer({
-        fromPubkey: account,
-        toPubkey: new PublicKey(DEFAULT_BLINKMEACOFFEE_ACCOUNT),
-        lamports: feeAmount * LAMPORTS_PER_SOL,
+        lamports: amount * LAMPORTS_PER_SOL,
       })
     );
 
@@ -121,37 +123,24 @@ export async function POST(request: Request) {
     const payload: ActionPostResponse = await createPostResponse({
       fields: {
         transaction,
-        message: `Successfully sent ${amount} coffees to ${to}`,
+        message: `Successfully sent ${amount} SOL to ${to}`,
       },
     });
 
-    return Response.json(payload, {
+    return new Response(JSON.stringify(payload), {
       headers: ACTIONS_CORS_HEADERS,
     });
   } catch (error) {
-    let message = 'An unknown error occured.';
-    if (typeof error == 'string') message = error;
-    return new Response(message, {
-      status: 400,
-      headers: ACTIONS_CORS_HEADERS,
-    });
+    return handleErrorResponse(error);
   }
 }
 
-const validateQueryParams = (requestUrl: URL) => {
-  const to = requestUrl.searchParams.get('to');
-  const amount = requestUrl.searchParams.get('amount');
-
-  if (!to) {
-    throw new Error("Missing required query parameter 'to'");
-  }
-
-  if (amount && isNaN(Number(amount)) && Number(amount) < 1) {
-    throw new Error("Invalid query parameter 'amount'");
-  }
-
-  return { to, amount: Number(amount) };
+// Function to handle error responses
+const handleErrorResponse = (error: unknown) => {
+  const message =
+    typeof error === 'string' ? error : 'An unknown error occurred.';
+  return new Response(message, {
+    status: 400,
+    headers: ACTIONS_CORS_HEADERS,
+  });
 };
-
-const DEFAULT_BLINKMEACOFFEE_ACCOUNT =
-  'TFd8fQFzrVPHsegBbLF2UPB7wHiXreEtY5uZdTuGtZW';
