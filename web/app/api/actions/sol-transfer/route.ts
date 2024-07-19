@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       title: 'Make a SOL Transfer',
       description: 'Transfer SOL securely and efficiently',
       label: 'Transfer SOL',
-      icon: 'https://example.com/icon.png',
+      icon: 'https://pbs.twimg.com/media/GRqBUajXEAAYSTw?format=jpg&name=medium',
       disabled: false,
       links: {
         actions: [
