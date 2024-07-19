@@ -9,6 +9,7 @@
   "private": true,
   "dependencies": {
     "@solana-developers/preset-next": "3.0.1",
+    "@solana/actions": "^1.2.0",
     "@solana/spl-token": "0.4.6",
     "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/wallet-adapter-react": "^0.15.35",
