@@ -30,6 +30,12 @@ const validateQueryParams = (requestUrl: URL) => {
   return { to, amount: Number(amount) };
 };
 
+// Function to create a connection to the Solana cluster
+const getConnection = () => {
+  const connectionURL = process.env.RPC_URL ?? clusterApiUrl('devnet');
+  return new Connection(connectionURL, 'confirmed');
+};
+
 // GET request handler
 export async function GET(request: Request) {
   try {
@@ -90,23 +96,11 @@ export async function POST(request: Request) {
     const { to, amount } = validateQueryParams(requestUrl);
 
     const body: ActionPostRequest = await request.json();
-    let account: PublicKey;
+    const account = parsePublicKey(body.account);
 
-    try {
-      account = new PublicKey(body.account);
-    } catch {
-      return new Response('Invalid "account" provided', {
-        status: 400,
-        headers: ACTIONS_CORS_HEADERS,
-      });
-    }
-
-    const connectionURL = process.env.RPC_URL ?? clusterApiUrl('devnet');
-    const connection = new Connection(connectionURL);
+    const connection = getConnection();
 
     const transaction = new Transaction();
-
-    // Add transfer instruction
     transaction.add(
       SystemProgram.transfer({
         fromPubkey: account,
@@ -134,6 +128,15 @@ export async function POST(request: Request) {
     return handleErrorResponse(error);
   }
 }
+
+// Function to parse and validate a public key
+const parsePublicKey = (key: string): PublicKey => {
+  try {
+    return new PublicKey(key);
+  } catch (error) {
+    throw new Error('Invalid "account" provided');
+  }
+};
 
 // Function to handle error responses
 const handleErrorResponse = (error: unknown) => {
