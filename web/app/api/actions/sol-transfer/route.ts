@@ -65,7 +65,7 @@ export async function GET(request: Request) {
           },
           {
             label: 'Send Custom Amount',
-            href: `${baseHref}&amount=amount`,
+            href: `${baseHref}&amount={amount}`,
             parameters: [
               {
                 name: 'amount',
