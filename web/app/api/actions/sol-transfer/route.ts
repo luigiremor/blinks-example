@@ -23,11 +23,11 @@ const validateQueryParams = (requestUrl: URL) => {
     throw new Error("Missing required query parameter 'to'");
   }
 
-  if (amount && (isNaN(Number(amount)) || Number(amount) < 1)) {
+  if (amount && (isNaN(Number(amount)) || Number(amount) <= 0)) {
     throw new Error("Invalid query parameter 'amount'");
   }
 
-  return { to, amount: Number(amount) };
+  return { to, amount: amount ? parseFloat(amount) : undefined };
 };
 
 // Function to create a connection to the Solana cluster
@@ -64,12 +64,12 @@ export async function GET(request: Request) {
             href: `${baseHref}&amount=5`,
           },
           {
-            label: 'Send Custom Amount',
+            label: 'Send SOL',
             href: `${baseHref}&amount={amount}`,
             parameters: [
               {
                 name: 'amount',
-                label: 'Enter the amount of SOL you want to send',
+                label: 'Enter the amount',
                 required: true,
               },
             ],
@@ -94,6 +94,10 @@ export async function POST(request: Request) {
   try {
     const requestUrl = new URL(request.url);
     const { to, amount } = validateQueryParams(requestUrl);
+
+    if (!to || !amount) {
+      throw new Error('Missing required body parameters');
+    }
 
     const body: ActionPostRequest = await request.json();
     const account = parsePublicKey(body.account);
